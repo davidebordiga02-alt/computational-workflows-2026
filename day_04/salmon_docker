@@ -1,11 +1,12 @@
-FROM debian:bullseye-slim
+# this is the base image the container is built on. In this case, it is Ubuntu 22.04 (for glibc compatibility with Salmon v1.5.2)
+FROM ubuntu:22.04
 
-LABEL image.author.name="yourname"
-LABEL image.author.email="yourmail"
+# these are the labels that are added to the image. They are metadata that can be used to identify the author of the image.
+LABEL image.author.name "yourname"
+LABEL image.author.email "yourmail"
 
-# Install dependencies
+# !TODO: copy the salmon binary into the container
+COPY salmon-1.5.2_linux_x86_64 /usr/local/bin/salmon
 
-# Download and install Salmon
-
-# Set the PATH environment variable (to /usr/bin)
-
+# !TODO: make salmon executable
+RUN chmod +x /usr/local/bin/salmon
