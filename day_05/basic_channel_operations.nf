@@ -7,8 +7,11 @@ workflow{
 
     // Task 1 - Extract the first item from the channel
 
-    if (params.step == 1) {
+    if (params.step == 1) {       
+
         in_ch = channel.of(1,2,3)
+        out_ch = in_ch.first()
+        out_ch.view()
 
     }
 
@@ -17,6 +20,8 @@ workflow{
     if (params.step == 2) {
 
         in_ch = channel.of(1,2,3)
+        out_ch = in_ch.last()
+        out_ch.view()
 
     }
 
@@ -25,7 +30,8 @@ workflow{
     if (params.step == 3) {
 
         in_ch = channel.of(1,2,3)
-
+        out_ch = in_ch.take(2)
+        out_ch.view()
 
     }
 
@@ -34,7 +40,8 @@ workflow{
     if (params.step == 4) {
 
         in_ch = channel.of(2,3,4)
-
+        out_ch = in_ch.map { it * it }
+        out_ch.view()
 
     }
 
@@ -52,6 +59,8 @@ workflow{
     if (params.step == 6) {
         
         in_ch = channel.of('Taylor', 'Swift')
+        out_ch = in_ch.map { it.reverse() }
+        out_ch.view()
 
     }
 
@@ -60,7 +69,8 @@ workflow{
     if (params.step == 7) {
 
         in_ch = channel.fromPath('files_dir/*.fq')
-
+        out_ch = in_ch.map { file -> [file.getName(), file.toString()] }
+        out_ch.view()
         
     }
 
@@ -71,7 +81,8 @@ workflow{
         ch_1 = channel.of(1,2,3)
         ch_2 = channel.of(4,5,6)
         out_ch = channel.of("a", "b", "c")
-
+        out_ch = ch_1.merge(ch_2)
+        out_ch.view()
 
     }
 
@@ -80,20 +91,22 @@ workflow{
     if (params.step == 9) {
 
         in_ch = channel.of([1,2,3], [4,5,6])
-
+        out_ch = in_ch.flatten()
+        out_ch.view()
 
     }
 
     // Task 10 - Collect the items of a channel into a list. What kind of channel is the output channel (value)?
-
+    //gathers all items from a queue channel into a single list and emits it as one item
+    
     if (params.step == 10) {
 
         in_ch = channel.of(1,2,3)
+        out_ch = in_ch.collect()
+        out_ch.view()
 
     }
     
-
-
     // Task 11 -  From the input channel, create lists where each first item in the list of lists is the first item in the output channel, followed by a list of all the items its paired with
     // e.g. 
     // in: [[1, 'A'], [1, 'B'], [1, 'C'], [2, 'D'], [2, 'E'], [3, 'F']]
@@ -102,15 +115,20 @@ workflow{
     if (params.step == 11) {
 
         in_ch = channel.of([1, 'V'], [3, 'M'], [2, 'O'], [1, 'f'], [3, 'G'], [1, 'B'], [2, 'L'], [2, 'E'], [3, '33'])
+        out_ch = in_ch.groupTuple()
+        out_ch.view()
 
     }
 
-    // Task 12 - Create a channel that joins the input to the output channel. What do you notice
+    // Task 12 - Create a channel that joins the input to the output channel. What do you notice?
+    //Join does a cartesian product for matching keys.
 
     if (params.step == 12) {
 
         left_ch = channel.of([1, 'V'], [3, 'M'], [2, 'O'], [1, 'B'], [3, '33'])
         right_ch = channel.of([1, 'f'], [3, 'G'], [2, 'L'], [2, 'E'],)
+        out_ch = left_ch.join(right_ch)
+        out_ch.view()
 
     }
 
@@ -120,6 +138,10 @@ workflow{
     if (params.step == 13) {
 
         in_ch = channel.of(1,2,3,4,5,6,7,8,9,10)
+        even_ch = in_ch.filter { it % 2 == 0 }
+        odd_ch = in_ch.filter { it % 2 != 0 }
+        even_ch.view { "EVEN: $it" }
+        odd_ch.view { "ODD: $it" }
 
     }
 
@@ -137,8 +159,11 @@ workflow{
             ['name': 'Hagrid', 'title': 'groundkeeper'],
             ['name': 'Dobby', 'title': 'hero'],
         )
-    
+        in_ch.map { it.name }.collect().subscribe { names ->
+            File resultsDir = new File('results')
+            resultsDir.mkdirs()
+            new File(resultsDir, 'names.txt').write(names.join('\n'))
+        }
     }
-
 
 }

@@ -6,9 +6,70 @@ params {
 
 process SAYHELLO {
     debug true
+    script: "echo 'Hello World!'"
 }
 
+process SAYHELLO_PYTHON {
+    debug true
+    script: "python -c \"print('Hello World!')\""
+}
 
+process SAYHELLO_PARAM {
+    debug true
+    input: val greeting
+    script: "echo $greeting"
+}
+
+process SAYHELLO_FILE {
+    input: val greeting
+    output: path "hello.txt"
+    script: "echo $greeting > hello.txt"
+}
+
+process UPPERCASE {
+    input: val text
+    output: path "uppercase.txt"
+    script: "echo $text | tr '[:lower:]' '[:upper:]' > uppercase.txt"
+}
+
+process PRINTUPPER {
+    debug true
+    input: path uppercase_file
+    script: "cat $uppercase_file"
+}
+
+process WRITETOFILE {
+    input: val row
+    output: path "names.tsv"
+    script: """
+    echo -e "name\ttitle" > names.tsv
+    echo -e "${row.name}\t${row.title}" >> names.tsv
+    """
+}
+
+process ZIPFILE {
+    input: path infile
+    output: path "compressed.*"
+    script: """
+    if [ "${params.zip}" == "gzip" ]; then
+        gzip -c $infile > compressed.gz
+    elif [ "${params.zip}" == "bzip2" ]; then
+        bzip2 -c $infile > compressed.bz2
+    else
+        zip compressed.zip $infile
+    fi
+    """
+}
+
+process ZIPALL {
+    input: path infile
+    output: path "compressed.*"
+    script: """
+    gzip -c $infile > compressed.gz
+    bzip2 -c $infile > compressed.bz2
+    zip compressed.zip $infile
+    """
+}
 
 workflow {
 
@@ -29,6 +90,7 @@ workflow {
     }
 
     // Task 4 - create a process that reads in the string "Hello world!" from a channel and write it to a file. WHERE CAN YOU FIND THE FILE?
+    //The file is located in a hashed work directory under work/
     if (params.step == 4) {
         greeting_ch = Channel.of("Hello world!")
         SAYHELLO_FILE(greeting_ch)
@@ -42,6 +104,7 @@ workflow {
     }
 
     // Task 6 - add another process that reads in the resulting file from UPPERCASE and print the content to the console (debug true). WHAT CHANGED IN THE OUTPUT?
+    // The output now includes the content of the file created by the UPPERCASE process, which is the string "HELLO WORLD!" in uppercase letters.
     if (params.step == 6) {
         greeting_ch = Channel.of("Hello world!")
         out_ch = UPPERCASE(greeting_ch)
@@ -53,12 +116,18 @@ workflow {
     //          Print out the path to the zipped file in the console
     if (params.step == 7) {
         greeting_ch = Channel.of("Hello world!")
+        upper_ch = UPPERCASE(greeting_ch)
+        zip_ch = ZIPFILE(upper_ch)
+        zip_ch.view()
     }
 
     // Task 8 - Create a process that zips the file created in the UPPERCASE process in "zip", "gzip" AND "bzip2" format. Print out the paths to the zipped files in the console
 
     if (params.step == 8) {
         greeting_ch = Channel.of("Hello world!")
+        upper_ch = UPPERCASE(greeting_ch)
+        zip_ch = ZIPALL(upper_ch)
+        zip_ch.view()  
     }
 
     // Task 9 - Create a process that reads in a list of names and titles from a channel and writes them to a file.
@@ -74,10 +143,10 @@ workflow {
             ['name': 'Hagrid', 'title': 'groundkeeper'],
             ['name': 'Dobby', 'title': 'hero'],
         )
-
-        in_ch
-            | WRITETOFILE
-            // continue here
+        // need the ()
+        (in_ch
+            | WRITETOFILE)
+            .collectFile(name: 'names.tsv', storeDir: 'results', newLine: true, keepHeader: true)
     }
 
 }
